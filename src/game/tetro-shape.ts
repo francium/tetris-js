@@ -165,7 +165,7 @@ export class TetroShape {
 
   public static random(): TetroShape {
     const x = ['I', 'J', 'L', 'S', 'T', 'Z'];
-    const i = Math.round(Math.random() * x.length);
+    const i = Math.round(Math.random() * (x.length - 1));
     const r = Math.round(Math.random() * 3) as TetroRotation;
     return new TetroShape(x[i] as TetroShapeT, r);
   }

@@ -26,4 +26,8 @@ export class GameState {
   ];
   activeTetro = Tetro.random(new Vector2(3, 0));
 
+  public nextTetro() {
+    this.activeTetro = Tetro.random(new Vector2(3, 0));
+  }
+
 }

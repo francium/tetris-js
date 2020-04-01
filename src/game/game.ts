@@ -1,15 +1,21 @@
 import {Clock} from "./clock";
 import {GameControls} from "./game-controls";
 import {GameState} from "./game-state";
+import {Vector2} from "./vec";
 
-const GRID_W = 300 / 9;
-const GRID_H = 500 / 20;
+const ROWS = 20;
+const COLS = 9;
+
+const GRID_W = 300 / COLS;
+const GRID_H = 500 / ROWS;
 
 export class Game {
 
-  private static _FRAME_SKIP_TARGET = 20;
+  private static _CONTROL_SKIP_MS = 250;
+  private static _DROP_SKIP_MS = 500;
 
-  private _frameSkip = 0;
+  private _controlSkip = 0;
+  private _dropSkip = 0;
   private _clock: Clock = new Clock();
   private _controls = new GameControls();
   private _state = new GameState();
@@ -40,18 +46,13 @@ export class Game {
   }
 
   private _run(): void {
-    this._frameSkip++;
-    if (this._frameSkip === Game._FRAME_SKIP_TARGET) {
-      this._frameSkip = 0;
+    const dt = this._clock.tick()
+    this._update(dt);
+    this._render();
 
-      const dt = this._clock.tick()
-      this._update(dt);
-      this._render();
-
-      if (!this._running) {
-        this._stop();
-        return;
-      }
+    if (!this._running) {
+      this._stop();
+      return;
     }
 
     requestAnimationFrame(() => this._run());
@@ -61,18 +62,99 @@ export class Game {
   private _update(dt: number): void {
     this._dt = dt;
 
-    if (this._controls.activeKeys.has('w')) {
-      this._state.activeTetro.rotate();
+    let skipDrop = false;
+
+    this._controlSkip += dt;
+    if (this._controlSkip >= Game._CONTROL_SKIP_MS) {
+      this._controlSkip = 0;
+
+      if (this._controls.activeKeys.has('w')) {
+        this._state.activeTetro.rotate();
+      }
+      if (this._controls.activeKeys.has('s')) {
+        this._state.activeTetro.moveDown();
+        skipDrop = true;
+        this._dropSkip = 0;
+      }
+      if (this._controls.activeKeys.has('a')) {
+        const pos = this._state.activeTetro.position.add(new Vector2(-1, 0));
+        if (this._isPlaceableAt(pos)) {
+          this._state.activeTetro.moveLeft();
+        }
+      }
+      if (this._controls.activeKeys.has('d')) {
+        const pos = this._state.activeTetro.position.add(new Vector2(1, 0));
+        if (this._isPlaceableAt(pos)) {
+          this._state.activeTetro.moveRight();
+        }
+      }
     }
-    if (this._controls.activeKeys.has('s')) {
-      this._state.activeTetro.moveDown();
+
+    // Automatic drop
+    if (!skipDrop) {
+      this._dropSkip += dt;
+      if (this._dropSkip >= Game._DROP_SKIP_MS) {
+        this._dropSkip = 0;
+
+        if (!this._isLanded() && this._isPlaceableAt(this._state.activeTetro.position)) {
+          this._state.activeTetro.moveDown();
+        } else {
+          this._placeTetro();
+          this._state.nextTetro();
+        }
+      }
     }
-    if (this._controls.activeKeys.has('a')) {
-      this._state.activeTetro.moveLeft();
+  }
+
+  private _placeTetro() {
+    const pos = this._state.activeTetro.position;
+    const bitmap = this._state.activeTetro.shape.bitmap();
+
+    for (let r = 0; r < bitmap.length; r++) {
+      for (let c = 0; c < bitmap[0].length; c++) {
+        const ro = r + pos.y;
+        const co = c + pos.x;
+
+        if (bitmap[r][c] === 1) {
+          this._state.placedTetros[ro][co] = 1;
+        }
+      }
     }
-    if (this._controls.activeKeys.has('d')) {
-      this._state.activeTetro.moveRight();
+  }
+
+  private _isLanded(): boolean {
+    const pos = this._state.activeTetro.position.add(new Vector2(0, 1));
+    return !this._isPlaceableAt(pos);
+  }
+
+  private _isPlaceableAt(pos: Vector2): boolean {
+    const bitmap = this._state.activeTetro.shape.bitmap();
+
+    for (let r = 0; r < bitmap.length; r++) {
+      for (let c = 0; c < bitmap[0].length; c++) {
+        if (bitmap[r][c] == 0) { continue; }
+
+        const ro = r + pos.y;
+        const co = c + pos.x;
+
+        if (ro < 0 || ro >= ROWS || co < 0 || co >= COLS) {
+          return false;
+        }
+
+        if (this._state.placedTetros[ro][co] === 1) {
+          return false;
+        }
+
+        if (ro < 0 || ro >= ROWS) {
+          return false;
+        }
+        if (co < 0 || co >= COLS) {
+          return false;
+        }
+      }
     }
+
+    return true;
   }
 
   private _render(): void {
@@ -98,8 +180,8 @@ export class Game {
   private _renderPlacedTetros(): void {
     this._context.fillStyle = 'white';
 
-    for (let row = 0; row < 20; row++) {
-      for (let col = 0; col < 9; col++) {
+    for (let row = 0; row < ROWS; row++) {
+      for (let col = 0; col < COLS; col++) {
         if (this._state.placedTetros[row][col] === 0) { continue; }
 
         this._context.fillRect(100 + col * GRID_W, 0 + row * GRID_H, GRID_W, GRID_H);
@@ -130,13 +212,13 @@ export class Game {
     this._context.strokeStyle = '#800';
     this._context.lineWidth = 2;
 
-    for (let row = 1; row < 20; row++) {
+    for (let row = 1; row < ROWS; row++) {
       this._context.beginPath();
       this._context.moveTo(100, 0 + row * GRID_H);
       this._context.lineTo(400, 0 + row * GRID_H);
       this._context.stroke();
     }
-    for (let col = 1; col < 9; col++) {
+    for (let col = 1; col < COLS; col++) {
       this._context.beginPath();
       this._context.moveTo(100 + col * GRID_W, 0);
       this._context.lineTo(100 + col * GRID_W, 500);
@@ -153,6 +235,8 @@ export class Game {
     const activeKeys = `Keys: ${Array.from(this._controls.activeKeys).join(' ')}`;
     this._context.fillText(activeModifiers, 5, 35);
     this._context.fillText(activeKeys, 5, 45);
+
+    this._context.fillText(`control skip: ${this._controlSkip}, drop skip: ${this._dropSkip}`, 5, 55);
   }
 
 }
