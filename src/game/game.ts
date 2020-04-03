@@ -72,9 +72,7 @@ export class Game {
         this._state.activeTetro.rotate();
       }
       if (this._controls.activeKeys.has('s')) {
-        this._state.activeTetro.moveDown();
-        skipDrop = true;
-        this._dropSkip = 0;
+        this._dropSkip = Game._DROP_SKIP_MS;
       }
       if (this._controls.activeKeys.has('a')) {
         const pos = this._state.activeTetro.position.add(new Vector2(-1, 0));
@@ -88,6 +86,15 @@ export class Game {
           this._state.activeTetro.moveRight();
         }
       }
+      if (this._controls.activeKeys.has(' ')) {
+        while (this._canMoveDown()) {
+          this._state.activeTetro.moveDown();
+        }
+
+        this._placeTetro();
+        this._state.nextTetro();
+        this._clearLines();
+      }
     }
 
     // Automatic drop
@@ -96,14 +103,22 @@ export class Game {
       if (this._dropSkip >= Game._DROP_SKIP_MS) {
         this._dropSkip = 0;
 
-        if (!this._isLanded() && this._isPlaceableAt(this._state.activeTetro.position)) {
+        if (this._canMoveDown()) {
           this._state.activeTetro.moveDown();
         } else {
           this._placeTetro();
           this._state.nextTetro();
+          this._clearLines();
         }
       }
     }
+  }
+
+  private _canMoveDown() {
+    return (
+      !this._isLanded()
+      && this._isPlaceableAt(this._state.activeTetro.position)
+    );
   }
 
   private _placeTetro() {
@@ -144,17 +159,29 @@ export class Game {
         if (this._state.placedTetros[ro][co] === 1) {
           return false;
         }
-
-        if (ro < 0 || ro >= ROWS) {
-          return false;
-        }
-        if (co < 0 || co >= COLS) {
-          return false;
-        }
       }
     }
 
     return true;
+  }
+
+  private _clearLines(): void {
+    let dropAmount = 0;
+
+    for (let r = ROWS - 1; r >= 0; r--) {
+      const row = this._state.placedTetros[r];
+
+      if (dropAmount > 0) {
+        this._state.placedTetros[r + dropAmount] = row;
+      }
+
+      if (row.every(i => i === 1)) {
+        row.fill(0);
+        dropAmount++;
+      }
+    }
+
+
   }
 
   private _render(): void {
