@@ -6,6 +6,9 @@ import {Vector2} from "./vec";
 const ROWS = 20;
 const COLS = 9;
 
+const CANVAS_W = 500;
+const CANVAS_H = 500;
+
 const GRID_W = 300 / COLS;
 const GRID_H = 500 / ROWS;
 
@@ -66,6 +69,22 @@ export class Game {
 
     const keys = this._controls.getPressedKeys();
 
+    if (keys.has('r')) {
+      this._state.newGame();
+    }
+
+    if (this._state.state === 'game over') {
+      return;
+    }
+
+    if (keys.has('p')) {
+      this._state.togglePause();
+    }
+
+    if (this._state.state === 'paused') {
+      return;
+    }
+
     if (keys.has('w')) {
       this._state.activeTetro.rotate();
       const pos = this._state.activeTetro.position;
@@ -114,9 +133,18 @@ export class Game {
         }
       }
     }
+
+    if (this._isGameOver()) {
+      this._state.state = 'game over';
+    }
   }
 
-  private _canMoveDown() {
+  private _isGameOver(): boolean {
+    const pos = this._state.activeTetro.position;
+    return !this._isPlaceableAt(pos);
+  }
+
+  private _canMoveDown(): boolean {
     return (
       !this._isLanded()
       && this._isPlaceableAt(this._state.activeTetro.position)
@@ -192,7 +220,9 @@ export class Game {
     this._renderPlacedTetros();
     this._renderActiveTetro();
     this._renderGrid();
+
     this._renderDebugInfo();
+    this._renderMessage();
   }
 
   private _renderClearScreen(): void {
@@ -204,6 +234,18 @@ export class Game {
     this._context.fillStyle = '#800';
     this._context.fillRect(0, 0, 100, 500);
     this._context.fillRect(400, 0, 100, 500);
+  }
+
+  private _renderMessage(): void {
+    if (this._state.state === 'playing') { return; }
+
+    this._context.font = 'bold 40px Sans';
+    this._context.textAlign = 'center';
+    this._context.lineWidth = 10;
+    this._context.strokeStyle = 'red';
+    this._context.fillStyle = 'white';
+    this._context.strokeText(this._state.state.toUpperCase(), CANVAS_W / 2, CANVAS_H / 2);
+    this._context.fillText(this._state.state.toUpperCase(), CANVAS_W / 2, CANVAS_H / 2);
   }
 
   private _renderPlacedTetros(): void {
@@ -219,6 +261,8 @@ export class Game {
   }
 
   private _renderActiveTetro(): void {
+    if (this._state.state === 'game over') { return; }
+
     const tetro = this._state.activeTetro;
     const tetroBitmap = tetro.shape.bitmap();
 
@@ -256,6 +300,8 @@ export class Game {
   }
 
   private _renderDebugInfo(): void {
+    this._context.textAlign = 'left';
+    this._context.font = '12px Sans';
     this._context.fillStyle = 'white';
     this._context.fillText(`${+new Date()}`, 5, 25);
     this._context.fillText(`FPS: ${FPS.calculate(this._dt)}`, 5, 15);
@@ -264,6 +310,8 @@ export class Game {
     this._context.fillText(activeKeys, 5, 45);
 
     this._context.fillText(`control skip: ${this._controlSkip}, drop skip: ${this._dropSkip}`, 5, 55);
+
+    this._context.fillText(`game state: ${this._state.state}`, 5, 65);
   }
 
 }
