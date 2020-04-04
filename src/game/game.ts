@@ -68,6 +68,11 @@ export class Game {
 
     if (keys.has('w')) {
       this._state.activeTetro.rotate();
+      const pos = this._state.activeTetro.position;
+      if (!this._isPlaceableAt(pos)) {
+        // Undo rotation
+        this._state.activeTetro.rotate(-1);
+      }
     }
     if (keys.has('s')) {
       this._dropSkip = Game._DROP_SKIP_MS;

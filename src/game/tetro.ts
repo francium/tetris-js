@@ -20,8 +20,8 @@ export class Tetro {
     (this.position as any) = this.position.add(new Vector2(1, 0));
   }
 
-  public rotate() {
-    this.shape.rotate();
+  public rotate(direction: 1 | -1 = 1) {
+    this.shape.rotate(direction);
   }
 
   public static random(position: Vector2) {

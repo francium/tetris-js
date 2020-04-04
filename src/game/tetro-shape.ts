@@ -159,8 +159,8 @@ export class TetroShape {
     return TetroShape._shapes[this._shapeT][this._rotation];
   }
 
-  public rotate(): void {
-    (this._rotation as any)  = (this._rotation + 1) % 4;
+  public rotate(direction: 1 | -1 = 1): void {
+    (this._rotation as any)  = (this._rotation + direction) % 4;
   }
 
   public static random(): TetroShape {

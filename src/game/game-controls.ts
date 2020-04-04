@@ -5,7 +5,7 @@ const mapToKey = map((evs: KeyboardEvent[]) => evs.map(ev => ev.key));
 
 export class GameControls {
 
-  private static readonly POLL_RATE = 150;
+  private static readonly POLL_RATE = 75;
 
   private _activeKeys: Set<string> = new Set();
 
