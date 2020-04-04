@@ -64,37 +64,34 @@ export class Game {
 
     let skipDrop = false;
 
-    this._controlSkip += dt;
-    if (this._controlSkip >= Game._CONTROL_SKIP_MS) {
-      this._controlSkip = 0;
+    const keys = this._controls.getPressedKeys();
 
-      if (this._controls.activeKeys.has('w')) {
-        this._state.activeTetro.rotate();
+    if (keys.has('w')) {
+      this._state.activeTetro.rotate();
+    }
+    if (keys.has('s')) {
+      this._dropSkip = Game._DROP_SKIP_MS;
+    }
+    if (keys.has('a')) {
+      const pos = this._state.activeTetro.position.add(new Vector2(-1, 0));
+      if (this._isPlaceableAt(pos)) {
+        this._state.activeTetro.moveLeft();
       }
-      if (this._controls.activeKeys.has('s')) {
-        this._dropSkip = Game._DROP_SKIP_MS;
+    }
+    if (keys.has('d')) {
+      const pos = this._state.activeTetro.position.add(new Vector2(1, 0));
+      if (this._isPlaceableAt(pos)) {
+        this._state.activeTetro.moveRight();
       }
-      if (this._controls.activeKeys.has('a')) {
-        const pos = this._state.activeTetro.position.add(new Vector2(-1, 0));
-        if (this._isPlaceableAt(pos)) {
-          this._state.activeTetro.moveLeft();
-        }
+    }
+    if (keys.has(' ')) {
+      while (this._canMoveDown()) {
+        this._state.activeTetro.moveDown();
       }
-      if (this._controls.activeKeys.has('d')) {
-        const pos = this._state.activeTetro.position.add(new Vector2(1, 0));
-        if (this._isPlaceableAt(pos)) {
-          this._state.activeTetro.moveRight();
-        }
-      }
-      if (this._controls.activeKeys.has(' ')) {
-        while (this._canMoveDown()) {
-          this._state.activeTetro.moveDown();
-        }
 
-        this._placeTetro();
-        this._state.nextTetro();
-        this._clearLines();
-      }
+      this._placeTetro();
+      this._state.nextTetro();
+      this._clearLines();
     }
 
     // Automatic drop
@@ -258,9 +255,7 @@ export class Game {
     this._context.fillText(`${+new Date()}`, 5, 25);
     this._context.fillText(`FPS: ${FPS.calculate(this._dt)}`, 5, 15);
 
-    const activeModifiers = `Modifiers: A: ${this._controls.alt}, C: ${this._controls.ctrl}, S: ${this._controls.shift}`;
-    const activeKeys = `Keys: ${Array.from(this._controls.activeKeys).join(' ')}`;
-    this._context.fillText(activeModifiers, 5, 35);
+    const activeKeys = `Keys: ${Array.from(this._controls.peekPressedKeys()).join(' ')}`;
     this._context.fillText(activeKeys, 5, 45);
 
     this._context.fillText(`control skip: ${this._controlSkip}, drop skip: ${this._dropSkip}`, 5, 55);

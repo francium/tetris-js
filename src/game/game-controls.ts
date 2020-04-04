@@ -1,42 +1,50 @@
+import { fromEvent, interval, Subscription } from 'rxjs';
+import { buffer, map } from 'rxjs/operators';
+
+const mapToKey = map((evs: KeyboardEvent[]) => evs.map(ev => ev.key));
+
 export class GameControls {
 
-  public readonly activeKeys: Set<string> = new Set();
-  public readonly alt: boolean = false;
-  public readonly ctrl: boolean = false;
-  public readonly shift: boolean = false;
+  private static readonly POLL_RATE = 150;
 
-  private _handlerMap: Map<string, Function> = new Map();
+  private _activeKeys: Set<string> = new Set();
+
+  private _subs: Subscription[] = [];
 
   public init() {
-    this._registerHandler('keydown', this._handleKeydown.bind(this));
-    this._registerHandler('keyup', this._handleKeyup.bind(this));
+    const poll$ = interval(GameControls.POLL_RATE);
+
+    const keydown$ = fromEvent<KeyboardEvent>(document.body, 'keydown').pipe(
+      buffer(poll$),
+      mapToKey,
+    );
+    const keyup$ = fromEvent<KeyboardEvent>(document.body, 'keyup').pipe(
+      buffer(poll$),
+      mapToKey,
+    );
+
+    this._subs = [
+      keydown$.subscribe(keys => {
+        keys.forEach(k => this._activeKeys.add(k));
+      }),
+      keyup$.subscribe(keys => {
+        keys.forEach(k => this._activeKeys.delete(k));
+      }),
+    ]
   }
 
   public destory() {
-    this._handlerMap.forEach((handler, eventType) => {
-      document.body.removeEventListener(eventType as any, handler as any);
-    })
+    this._subs.forEach(s => s.unsubscribe());
   }
 
-  private _registerHandler(eventType: string, handler: Function): void {
-    this._handlerMap.set(eventType, handler);
-    document.addEventListener(eventType, handler as any);
+  public peekPressedKeys() {
+    return this._activeKeys;
   }
 
-  private _handleKeydown(ev: KeyboardEvent) {
-    this.activeKeys.add(ev.key);
-    this._updateModifiers(ev);
-  }
-
-  private _handleKeyup(ev: KeyboardEvent) {
-    this.activeKeys.delete(ev.key);
-    this._updateModifiers(ev);
-  }
-
-  private _updateModifiers(ev: KeyboardEvent) {
-    (this.alt as any) = ev.altKey;
-    (this.ctrl as any) = ev.ctrlKey;
-    (this.shift as any) = ev.shiftKey;
+  public getPressedKeys() {
+    const s = this._activeKeys;
+    this._activeKeys = new Set();
+    return s;
   }
 
 }

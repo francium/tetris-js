@@ -15,6 +15,7 @@
     "typescript": "^3.8.3"
   },
   "dependencies": {
-    "normalize.css": "^8.0.1"
+    "normalize.css": "^8.0.1",
+    "rxjs": "^6.5.5"
   }
 }
